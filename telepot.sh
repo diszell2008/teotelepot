@@ -3,16 +3,21 @@
 import sys
 import time
 import telepot
+from importlib import reload
 
 import logging
 import subprocess
 from logging import handlers
 from pprint import pprint
 import re
+import socket
 
 
-reload(sys)
-sys.setdefaultencoding('utf8')
+#reload(sys)
+#sys.setdefaultencoding('utf8')
+if sys.version[0] == '2':
+    reload(sys)
+    sys.setdefaultencoding("utf-8")
 
 def run_shell_command(cmd):
     logger.info("--> cmd line : "+cmd)
@@ -60,15 +65,24 @@ def check_temperature_room():
             return response
     return ""
 
-def check_temperature_cpu():
-    ret = run_shell_command("sensors -u | grep _input | awk '{print $2}' | sort | tail -1")
-    temperature = int(float(ret))
-    logger.info("highest cpu temperature: "+ret)
-    if temperature > max_temperature_cpu_celcius:
-        ret = run_shell_command("sensors")
-        response = "CPU  Temperature ALERT !!!\nthreshold:"+str(max_temperature_cpu_celcius)+"C\n"+ret
-        logger.info(response)
-        return response
+def checkFarm():
+    ret = run_shell_command("screen -ls | grep farm | awk '{print $1}' | sort | tail -1")
+    if ret.find("farm")!=-1:
+        logger.info("Found Farm")
+        bot.sendMessage(admin_uid, socket.gethostname()+ ": Farm Chạy Rồi Nè")
+    else:
+        logger.info("Chet CMN Farn Roi")
+        bot.sendMessage(admin_uid, socket.gethostname()+ ": Chết cmn Farm Rồi Nè")
+    return ""
+
+def checkNode():
+    ret = run_shell_command("screen -ls | grep node | awk '{print $1}' | sort | tail -1")
+    if ret.find("node")!=-1:
+        logger.info("Found Node")
+        bot.sendMessage(admin_uid, socket.gethostname()+ ": Node Chạy Rồi Nè")
+    else:
+        logger.info("Chet CMN Node Roi")
+        bot.sendMessage(admin_uid, socket.gethostname()+ ": Chết cmn Node Rồi Nè")
     return ""
 
 
@@ -76,13 +90,13 @@ def check_all():
     ret = check_temperature_room()
     if ret != "":
         bot.sendMessage(admin_uid, ret)
-    ret = check_temperature_cpu()
+    ret = checkNode()
+    if ret != "":
+        bot.sendMessage(admin_uid, ret)
+    ret = checkFarm()
     if ret != "":
         bot.sendMessage(admin_uid, ret)
     return
-
-
-
 
 
 if __name__ == "__main__":
@@ -98,26 +112,26 @@ if __name__ == "__main__":
 
     # Adjust this section
     # -----------------------------------------------------------------
-    TOKEN="<SET THIS: Your Bot Token>"
-    admin_uid = <SET THIS: Your UID, integer, you can get it by uncomment the pprint command inside handle function above>
-    admin_username =  "<SET THIS: Your username, string, you can get it by uncomment the pprint command inside handle function above>"
-    admin_passcode = "<SET THIS: any single word, does not support space yet>"
-    interval = <SET THIS: how frequent you want to run the checking, integer>
-    max_temperature_room_celcius = <SET THIS, max threshold for room temperature, integer>
-    max_temperature_cpu_celcius = <SET THIS, max threshold for CPU temperature, integer>
+    TOKEN="5357644253:AAESJpHKWzeaE3xLqu7WktmJrKrVYxcOyYQ"
+    admin_uid = -1001696533871
+    admin_username = "admin"
+    admin_passcode = "admin"
+    interval = 10
+    max_temperature_room_celcius = 40
+    max_temperature_cpu_celcius = 70
     # -----------------------------------------------------------------
 
     bot = telepot.Bot(TOKEN)
     bot.message_loop(handle)
     print ('Listening ...')
-    bot.sendMessage(admin_uid, "bot is started")
+    bot.sendMessage(admin_uid, socket.gethostname()+ ": Bót Chạy Rồi Nè")
 
     # Keep the program running.
     starttime=int(time.time())
     while 1:
         curtime = int(time.time())
         if curtime - starttime > interval:
-            bot.sendMessage(admin_uid, "I am alive")
+            bot.sendMessage(admin_uid, socket.gethostname()+ "Still Alive")
             check_all()
             starttime=int(time.time())
         time.sleep(10)
