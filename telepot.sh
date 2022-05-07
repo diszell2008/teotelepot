@@ -2,7 +2,7 @@
 
 import sys
 import time
-import telepot
+import telebot
 from importlib import reload
 
 import logging
@@ -11,6 +11,14 @@ from logging import handlers
 from pprint import pprint
 import re
 import socket
+
+# Adjust this section
+# -----------------------------------------------------------------
+TOKEN="5357644253:AAESJpHKWzeaE3xLqu7WktmJrKrVYxcOyYQ"
+admin_uid = -1001728969047
+interval = 10
+# -----------------------------------------------------------------
+bot = telebot.TeleBot(TOKEN, parse_mode=None) # You can set parse_mode by default. HTML or MARKDOWN
 
 
 #reload(sys)
@@ -47,59 +55,73 @@ def handle(msg):
     if content_type == 'text':
         ret = run_shell_command(cmd)
         # max telegram message is 4096
-        # https://core.telegram.org/method/messages.sendMessage
+        # https://core.telegram.org/method/messages.send_message
         if len(ret) > 4095:
             ret = ret[:4000]+"\n\n...message is truncated..."
-        bot.sendMessage(chat_id, cmd+": "+ret)
-
-
-def check_temperature_room():
-    ret = run_shell_command("/usr/local/bin/pcsensor")
-    parse = re.split("\s+", ret)
-    logger.info(ret)
-    if len(parse) > 4:
-        temperature = int(float(parse[4].replace("C","")))
-        if temperature > max_temperature_room_celcius:
-            response = "Room Temperature ALERT !!!\nthreshold:"+str(max_temperature_room_celcius)+"C\n"+ret
-            logger.info(response)
-            return response
-    return ""
+        bot.send_message(chat_id, cmd+": "+ret)
 
 def checkFarm():
     ret = run_shell_command("screen -ls | grep farm | awk '{print $1}' | sort | tail -1")
     if ret.find("farm")!=-1:
         logger.info("Found Farm")
-        bot.sendMessage(admin_uid, socket.gethostname()+ ": Farm Chạy Rồi Nè")
+        # bot.send_message(admin_uid, socket.gethostname()+ ": Farm Chạy Rồi Nè")
     else:
         logger.info("Chet CMN Farn Roi")
-        bot.sendMessage(admin_uid, socket.gethostname()+ ": Chết cmn Farm Rồi Nè")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Chết cmn Farm Rồi Nè")
     return ""
 
 def checkNode():
     ret = run_shell_command("screen -ls | grep node | awk '{print $1}' | sort | tail -1")
     if ret.find("node")!=-1:
         logger.info("Found Node")
-        bot.sendMessage(admin_uid, socket.gethostname()+ ": Node Chạy Rồi Nè")
+        # bot.send_message(admin_uid, socket.gethostname()+ ": Node Chạy Rồi Nè")
     else:
         logger.info("Chet CMN Node Roi")
-        bot.sendMessage(admin_uid, socket.gethostname()+ ": Chết cmn Node Rồi Nè")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Chết cmn Node Rồi Nè")
+    return ""
+
+def checkNodeStartup():
+    ret = run_shell_command("screen -ls | grep node | awk '{print $1}' | sort | tail -1")
+    if ret.find("node")!=-1:
+        logger.info("Found Node")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Node Chạy Rồi Nè")
+    else:
+        logger.info("Chet CMN Node Roi")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Chết cmn Node Rồi Nè")
+    
+    ret = run_shell_command("screen -ls | grep farm | awk '{print $1}' | sort | tail -1")
+    if ret.find("farm")!=-1:
+        logger.info("Found Farm")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Farm Chạy Rồi Nè")
+    else:
+        logger.info("Chet CMN Farn Roi")
+        bot.send_message(admin_uid, socket.gethostname()+ ": Chết cmn Farm Rồi Nè")
+    
     return ""
 
 
 def check_all():
-    ret = check_temperature_room()
-    if ret != "":
-        bot.sendMessage(admin_uid, ret)
     ret = checkNode()
     if ret != "":
-        bot.sendMessage(admin_uid, ret)
+        bot.send_message(admin_uid, ret)
     ret = checkFarm()
     if ret != "":
-        bot.sendMessage(admin_uid, ret)
+        bot.send_message(admin_uid, ret)
     return
 
 
 if __name__ == "__main__":
+
+    @bot.message_handler(commands=['start', 'help'])
+    def send_welcome(message):
+        bot.reply_to(message, "Howdy, how are you doing?")
+
+    @bot.message_handler(func=lambda message: True)
+    def echo_all(message):
+        bot.reply_to(message, message.text)
+
+    # bot.infinity_polling()
+    
 
     logger = logging.getLogger(__name__)
     LOG_FORMAT = "%(levelname) -10s %(asctime)s %(name) -15s %(funcName) -20s %(lineno) -5d: %(message)s"
@@ -109,29 +131,17 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
 
     logger.info("Program started")
-
-    # Adjust this section
-    # -----------------------------------------------------------------
-    TOKEN="5357644253:AAESJpHKWzeaE3xLqu7WktmJrKrVYxcOyYQ"
-    admin_uid = -1001696533871
-    admin_username = "admin"
-    admin_passcode = "admin"
-    interval = 10
-    max_temperature_room_celcius = 40
-    max_temperature_cpu_celcius = 70
-    # -----------------------------------------------------------------
-
-    bot = telepot.Bot(TOKEN)
-    bot.message_loop(handle)
     print ('Listening ...')
-    bot.sendMessage(admin_uid, socket.gethostname()+ ": Bót Chạy Rồi Nè")
+    
+    bot.send_message(admin_uid, socket.gethostname()+ ": Bot Chạy Rồi Nè")
+    checkNodeStartup()
 
     # Keep the program running.
     starttime=int(time.time())
     while 1:
         curtime = int(time.time())
         if curtime - starttime > interval:
-            bot.sendMessage(admin_uid, socket.gethostname()+ "Still Alive")
+            # bot.send_message(admin_uid, socket.gethostname()+ "Still Alive")
             check_all()
             starttime=int(time.time())
         time.sleep(10)
